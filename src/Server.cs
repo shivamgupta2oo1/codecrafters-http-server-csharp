@@ -28,9 +28,9 @@ class Program
                 string userAgent = GetUserAgent(request);
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
             }
-            else if (IsEchoRaspberryRequest(request))
+            else if (IsEchoStrawberryRequest(request))
             {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nraspberry";
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nstrawberry";
             }
             else
             {
@@ -62,9 +62,9 @@ class Program
         }
         return "";
     }
-   static bool IsEchoStrawberryRequest(string request)
-{
-    return request.Contains("GET /echo/strawberry");
-}
 
+    static bool IsEchoStrawberryRequest(string request)
+    {
+        return request.Contains("GET /echo/strawberry");
+    }
 }
