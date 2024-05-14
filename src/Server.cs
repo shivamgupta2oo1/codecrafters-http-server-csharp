@@ -22,28 +22,23 @@ class Program
             Console.WriteLine($"Received request: {request.Url}");
 
             // Prepare response with the requested string
-            string responseString = requestedString; // Set the response string dynamically
+            string responseString = requestedString ?? string.Empty; // Set the response string dynamically
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+            
+            // Set the status code and description
+            response.StatusCode = (int)HttpStatusCode.OK;
+            response.StatusDescription = "OK";
+
+            // Set the content type header
             response.ContentType = "text/plain";
 
-            // Check if the requested resource exists
-            if (string.IsNullOrEmpty(requestedString))
-            {
-                // For the root URL ("/"), respond with a status code of 200
-                response.StatusCode = (int)HttpStatusCode.OK;
-                response.StatusDescription = "OK";
-            }
-            else
-            {
-                // For other URLs, respond with a status code of 404
-                response.StatusCode = (int)HttpStatusCode.NotFound;
-                response.StatusDescription = "Not Found";
-            }
-
-            // Set the content length dynamically based on the response string length
+            // Set the content length header
             response.ContentLength64 = buffer.Length;
 
+            // Write the headers to the output stream
             response.OutputStream.Write(buffer, 0, buffer.Length);
+
+            // Close the output stream
             response.OutputStream.Close();
             Console.WriteLine("Response sent.");
         }
@@ -53,7 +48,7 @@ class Program
     {
         if (segments.Length >= 2 && segments[1] != "/")
         {
-            return segments[1].Trim('/');
+            return segments[1].Trim();
         }
         else
         {
