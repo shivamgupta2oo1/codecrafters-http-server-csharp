@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 
 class Program
@@ -21,10 +22,17 @@ class Program
 
             Console.WriteLine($"Received request: {request.Url}");
 
+            // Read the request body
+            string requestBody;
+            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                requestBody = reader.ReadToEnd();
+            }
+
             // Prepare response with the requested string
-            string responseString = requestedString ?? string.Empty; // Set the response string dynamically
+            string responseString = string.IsNullOrEmpty(requestBody) ? requestedString : requestBody;
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
-            
+
             // Set the status code and description
             response.StatusCode = (int)HttpStatusCode.OK;
             response.StatusDescription = "OK";
