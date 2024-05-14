@@ -14,7 +14,6 @@ class Program
         {
             var context = listener.GetContext();
             var request = context.Request;
-            Console.WriteLine(request);
             var response = context.Response;
 
             // Extract the requested string from the URL
@@ -23,7 +22,7 @@ class Program
             Console.WriteLine($"Received request: {request.Url}");
 
             // Prepare response with the requested string
-            string responseString = requestedString;
+            string responseString = requestedString; // Set the response string dynamically
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
             response.ContentType = "text/plain";
             response.ContentLength64 = buffer.Length;
