@@ -13,66 +13,64 @@ class Program
 
         while (true)
         {
-            TcpClient client = server.AcceptTcpClient();
-            Console.WriteLine("Client connected.");
+            using (TcpClient client = server.AcceptTcpClient())
+            using (NetworkStream stream = client.GetStream())
+            {
+                byte[] buffer = new byte[1024];
+                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
 
-            NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024];
-            int bytesRead = stream.Read(buffer, 0, buffer.Length);
-            string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                string response = HandleRequest(request);
 
-            string response;
+                byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
+                stream.Write(responseBuffer, 0, responseBuffer.Length);
 
-            if (IsUserAgentRequest(request))
-            {
-                string userAgent = GetUserAgent(request);
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
+                Console.WriteLine("Response sent. Client disconnected.");
             }
-            else if (IsEchoRequest(request, "strawberry"))
-            {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nstrawberry";
-            }
-            else if (IsEchoRequest(request, "mango"))
-            {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nmango";
-            }
-            else if (IsEchoRequest(request, "orange"))
-            {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n\r\norange";
-            }
-            else
-            {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
-            }
-
-            byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
-            stream.Write(responseBuffer, 0, responseBuffer.Length);
-            stream.Close();
-            client.Close();
-            Console.WriteLine("Response sent. Client disconnected.");
         }
     }
 
-    static bool IsUserAgentRequest(string request)
+    static string HandleRequest(string request)
     {
-        return request.Contains("GET /user-agent");
-    }
-
-    static string GetUserAgent(string request)
-    {
-        string[] lines = request.Split("\r\n");
-        foreach (var line in lines)
+        if (IsEchoRequest(request, out string echoValue))
         {
-            if (line.StartsWith("User-Agent:"))
-            {
-                return line.Substring("User-Agent:".Length).Trim();
-            }
+            return $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {echoValue.Length}\r\n\r\n{echoValue}";
         }
-        return "";
+        else if (IsUserAgentRequest(request, out string userAgent))
+        {
+            return $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
+        }
+        else
+        {
+            return "HTTP/1.1 404 Not Found\r\n\r\n";
+        }
     }
 
-    static bool IsEchoRequest(string request, string value)
+    static bool IsEchoRequest(string request, out string value)
     {
-        return request.Contains($"GET /echo/{value}");
+        value = "";
+        if (request.StartsWith("GET /echo/"))
+        {
+            value = request.Substring(10).Trim();
+            return true;
+        }
+        return false;
+    }
+
+    static bool IsUserAgentRequest(string request, out string userAgent)
+    {
+        userAgent = "";
+        if (request.StartsWith("GET /user-agent"))
+        {
+            foreach (var line in request.Split('\n'))
+            {
+                if (line.StartsWith("User-Agent:"))
+                {
+                    userAgent = line.Substring("User-Agent:".Length).Trim();
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
