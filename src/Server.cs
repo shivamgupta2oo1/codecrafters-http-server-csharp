@@ -42,7 +42,8 @@ class Program
             }
             else
             {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                // Respond with a 200 OK status code even if the request is not recognized
+                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nNot Found";
             }
 
             byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
