@@ -49,9 +49,9 @@ class Program
 
     static string GetRequestedString(string[] segments)
     {
-        if (segments.Length >= 3)
+        if (segments.Length >= 2 && segments[1] != "/")
         {
-            return segments[2];
+            return segments[1].Trim('/');
         }
         else
         {
