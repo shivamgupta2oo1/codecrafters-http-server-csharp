@@ -29,13 +29,15 @@ class Program
             // Check if the requested resource exists
             if (string.IsNullOrEmpty(requestedString))
             {
-                response.StatusCode = (int)HttpStatusCode.NotFound;
-                response.StatusDescription = "Not Found";
+                // For the root URL ("/"), respond with a status code of 200
+                response.StatusCode = (int)HttpStatusCode.OK;
+                response.StatusDescription = "OK";
             }
             else
             {
-                response.StatusCode = (int)HttpStatusCode.OK;
-                response.StatusDescription = "OK";
+                // For other URLs, respond with a status code of 404
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+                response.StatusDescription = "Not Found";
             }
 
             response.ContentLength64 = buffer.Length;
@@ -58,4 +60,3 @@ class Program
         }
     }
 }
-
