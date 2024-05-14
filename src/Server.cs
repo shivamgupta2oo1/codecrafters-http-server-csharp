@@ -1,70 +1,53 @@
 using System;
-using System.IO;
 using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.RegularExpressions;
 
 class Program
 {
     static void Main(string[] args)
     {
-        var listener = new HttpListener();
-        listener.Prefixes.Add("http://localhost:4221/");
-        listener.Start();
-        Console.WriteLine("Server started. Listening for connections...");
+        TcpListener server = new TcpListener(IPAddress.Any, 4221);
+        server.Start();
+        Console.WriteLine("Server started. Waiting for connections...");
 
         while (true)
         {
-            var context = listener.GetContext();
-            var request = context.Request;
-            var response = context.Response;
+            TcpClient client = server.AcceptTcpClient();
+            Console.WriteLine("Client connected.");
 
-            // Extract the requested string from the URL
-            string requestedString = GetRequestedString(request.Url.Segments);
+            NetworkStream stream = client.GetStream();
+            byte[] buffer = new byte[1024];
+            int bytesRead = stream.Read(buffer, 0, buffer.Length);
+            string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
 
-            Console.WriteLine($"Received request: {request.Url}");
+            string[] lines = request.Split("\r\n");
+            string[] requestLine = lines[0].Split(' ');
+            string path = requestLine[1];
 
-            // Prepare response with the requested string
-            string responseString = requestedString; // Set the response string dynamically
-            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+            string response;
 
-            // Set the content type header
-            response.ContentType = "text/plain";
-
-            // Check if the requested resource exists
-            if (string.IsNullOrEmpty(requestedString))
+            if (path.StartsWith("/echo/"))
             {
-                // For the root URL ("/"), respond with a status code of 404
-                response.StatusCode = (int)HttpStatusCode.NotFound;
-                response.StatusDescription = "Not Found";
+                // Extract the string from the URL path
+                string str = path.Substring(6); // Remove "/echo/"
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {str.Length}\r\n\r\n{str}";
+            }
+            else if (path == "/")
+            {
+                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\nabc";
             }
             else
             {
-                // For other URLs, respond with a status code of 200
-                response.StatusCode = (int)HttpStatusCode.OK;
-                response.StatusDescription = "OK";
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
             }
 
-            // Set the content length header
-            response.ContentLength64 = buffer.Length;
-
-            // Write the headers to the output stream
-            response.OutputStream.Write(buffer, 0, buffer.Length);
-
-            // Close the output stream
-            response.OutputStream.Close();
-            Console.WriteLine("Response sent.");
+            byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
+            stream.Write(responseBuffer, 0, responseBuffer.Length);
+            stream.Close();
+            client.Close();
+            Console.WriteLine("Response sent. Client disconnected.");
         }
     }
-
-   private static string GetRequestedString(string[] segments)
-{
-    if (segments.Length >= 2 && segments[1] != "/")
-    {
-        return segments[1].Trim('/');
-    }
-    else
-    {
-        // If the URL doesn't have enough segments, return an empty string
-        return string.Empty;
-    }
-}
 }
