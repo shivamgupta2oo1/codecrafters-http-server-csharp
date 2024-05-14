@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.RegularExpressions;
 
 class Program
 {
@@ -22,21 +21,12 @@ class Program
             int bytesRead = stream.Read(buffer, 0, buffer.Length);
             string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
 
-            string[] lines = request.Split("\r\n");
-            string[] requestLine = lines[0].Split(' ');
-            string path = requestLine[1];
-
             string response;
 
-            if (path.StartsWith("/echo/"))
+            if (IsUserAgentRequest(request))
             {
-                // Extract the string from the URL path
-                string str = path.Substring(6); // Remove "/echo/"
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {str.Length}\r\n\r\n{str}";
-            }
-            else if (path == "/")
-            {
-                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\nabc";
+                string userAgent = GetUserAgent(request);
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
             }
             else
             {
@@ -49,5 +39,23 @@ class Program
             client.Close();
             Console.WriteLine("Response sent. Client disconnected.");
         }
+    }
+
+    static bool IsUserAgentRequest(string request)
+    {
+        return request.Contains("GET /user-agent");
+    }
+
+    static string GetUserAgent(string request)
+    {
+        string[] lines = request.Split("\r\n");
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("User-Agent:"))
+            {
+                return line.Substring("User-Agent:".Length).Trim();
+            }
+        }
+        return "";
     }
 }
