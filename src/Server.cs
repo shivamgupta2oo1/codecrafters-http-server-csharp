@@ -30,7 +30,7 @@ class Program
             }
             else if (IsEchoStrawberryRequest(request))
             {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nraspberry";
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nstrawberry";
             }
             else if (IsEchoMangoRequest(request))
             {
