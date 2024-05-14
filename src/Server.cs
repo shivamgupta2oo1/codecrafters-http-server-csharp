@@ -27,9 +27,9 @@ class Program
             response.ContentType = "text/plain";
 
             // Check if the requested resource exists
-            if (string.IsNullOrEmpty(requestedString))
+            if (string.IsNullOrEmpty(requestedString) || requestedString == "index.html")
             {
-                // For the root URL ("/"), respond with a status code of 200
+                // For the root URL ("/") or "/index.html", respond with a status code of 200
                 response.StatusCode = (int)HttpStatusCode.OK;
                 response.StatusDescription = "OK";
             }
