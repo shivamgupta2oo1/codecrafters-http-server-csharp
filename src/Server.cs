@@ -1,21 +1,44 @@
+using System;
 using System.Net;
 using System.Net.Sockets;
-// You can use print statements as follows for debugging, they'll be visible when running tests.
-Console.WriteLine("Logs from your program will appear here!");
-// Uncomment this block to pass the first stage
-TcpListener server = new TcpListener(IPAddress.Any, 4221);
-server.Start();
-server.AcceptSocket(); // wait for client
 
-using TcpClient client = await server.AcceptTcpClientAsync();
-await using NetworkStream stream = client.GetStream();
-// Read incoming data
-byte[] requestBuffer = new byte[1024];
-int bytesRead = await stream.ReadAsync(requestBuffer, 0, requestBuffer.Length);
-string request =
-    System.Text.Encoding.UTF8.GetString(requestBuffer, 0, bytesRead);
-Console.WriteLine($"Received request: {request}");
-// Prepare and send response
-string response = "HTTP/1.1 200 OK\r\n\r\n";
-byte[] responseBuffer = System.Text.Encoding.UTF8.GetBytes(response);
-stream.Write(responseBuffer, 0, responseBuffer.Length);
+class Program
+{
+    static async System.Threading.Tasks.Task Main(string[] args)
+    {
+        TcpListener server = new TcpListener(IPAddress.Any, 4221);
+        server.Start();
+        Console.WriteLine("Waiting for client...");
+        
+        using TcpClient client = await server.AcceptTcpClientAsync();
+        Console.WriteLine("Client connected.");
+        
+        await using NetworkStream stream = client.GetStream();
+        byte[] requestBuffer = new byte[1024];
+        
+        // Read incoming data
+        int bytesRead = await stream.ReadAsync(requestBuffer, 0, requestBuffer.Length);
+        
+        if (bytesRead == 0)
+        {
+            Console.WriteLine("No data received.");
+            return;
+        }
+        
+        string request = System.Text.Encoding.UTF8.GetString(requestBuffer, 0, bytesRead);
+        Console.WriteLine($"Received request: {request}");
+        
+        // Check if it's a valid HTTP request
+        if (!request.StartsWith("GET"))
+        {
+            Console.WriteLine("Invalid HTTP request.");
+            return;
+        }
+        
+        // Prepare and send response
+        string response = "HTTP/1.1 200 OK\r\n\r\nHello, World!";
+        byte[] responseBuffer = System.Text.Encoding.UTF8.GetBytes(response);
+        await stream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+        Console.WriteLine("Response sent.");
+    }
+}
