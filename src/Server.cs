@@ -27,9 +27,9 @@ class Program
             response.ContentType = "text/plain";
 
             // Check if the requested resource exists
-            if (string.IsNullOrEmpty(requestedString) || requestedString == "index.html")
+            if (string.IsNullOrEmpty(requestedString))
             {
-                // For the root URL ("/") or "/index.html", respond with a status code of 200
+                // For the root URL ("/"), respond with a status code of 200
                 response.StatusCode = (int)HttpStatusCode.OK;
                 response.StatusDescription = "OK";
             }
@@ -39,6 +39,10 @@ class Program
                 response.StatusCode = (int)HttpStatusCode.NotFound;
                 response.StatusDescription = "Not Found";
             }
+
+            // Set the status code before writing the response
+            response.StatusCode = (int)HttpStatusCode.OK;
+            response.StatusDescription = "OK";
 
             response.ContentLength64 = buffer.Length;
             response.OutputStream.Write(buffer, 0, buffer.Length);
