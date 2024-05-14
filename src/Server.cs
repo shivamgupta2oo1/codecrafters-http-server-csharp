@@ -30,7 +30,7 @@ class Program
             }
             else if (IsEchoRequest(request, "strawberry"))
             {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nstrawberry";
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nstrawberry";
             }
             else if (IsEchoRequest(request, "mango"))
             {
@@ -39,10 +39,6 @@ class Program
             else if (IsEchoRequest(request, "orange"))
             {
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n\r\norange";
-            }
-            else if (IsEchoRequest(request, "grape"))
-            {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\ngrape";
             }
             else
             {
