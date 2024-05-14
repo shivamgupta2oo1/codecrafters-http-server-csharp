@@ -62,9 +62,8 @@ class Program
         }
         return "";
     }
-static bool IsEchoRaspberryRequest(string request)
-{
-    return request.Contains("GET /echo/pineapple");
-}
-
+    static bool IsEchoRaspberryRequest(string request)
+    {
+        return request.Contains("GET /echo/pineapple");
+    }
 }
