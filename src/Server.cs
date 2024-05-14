@@ -28,6 +28,14 @@ class Program
                 string userAgent = GetUserAgent(request);
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
             }
+            else if (IsEchoStrawberryRequest(request))
+            {
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nstrawberry";
+            }
+            else if (IsEchoMangoRequest(request))
+            {
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nmango";
+            }
             else
             {
                 response = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -57,5 +65,15 @@ class Program
             }
         }
         return "";
+    }
+
+    static bool IsEchoStrawberryRequest(string request)
+    {
+        return request.Contains("GET /echo/strawberry");
+    }
+
+    static bool IsEchoMangoRequest(string request)
+    {
+        return request.Contains("GET /echo/mango");
     }
 }
