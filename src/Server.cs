@@ -16,8 +16,8 @@ class Program
             var request = context.Request;
             var response = context.Response;
 
-            // Extract the requested string from the URL
-            string requestedString = request.Url.Segments.Length >= 2 ? request.Url.Segments[2] : string.Empty;
+            // Access the second segment directly without checking bounds
+            string requestedString = request.Url.Segments[2]; 
 
             Console.WriteLine($"Received request: {request.Url}");
 
