@@ -30,7 +30,7 @@ class Program
             }
             else if (IsEchoStrawberryRequest(request))
             {
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nstrawberry";
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nraspberry";
             }
             else if (IsEchoMangoRequest(request))
             {
@@ -42,8 +42,7 @@ class Program
             }
             else
             {
-                // Respond with a 200 OK status code even if the request is not recognized
-                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nNot Found";
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
             }
 
             byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
