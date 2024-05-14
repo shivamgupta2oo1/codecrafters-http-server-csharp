@@ -16,8 +16,8 @@ class Program
             var request = context.Request;
             var response = context.Response;
 
-            // Access the second segment directly without checking bounds
-            string requestedString = request.Url.Segments[2]; 
+            // Extract the requested string from the URL
+            string requestedString = GetRequestedString(request.Url.Segments);
 
             Console.WriteLine($"Received request: {request.Url}");
 
@@ -35,4 +35,18 @@ class Program
             Console.WriteLine("Response sent.");
         }
     }
+
+    static string GetRequestedString(string[] segments)
+    {
+        if (segments.Length >= 3)
+        {
+            return segments[2];
+        }
+        else
+        {
+            // If the URL doesn't have enough segments, return an empty string
+            return string.Empty;
+        }
+    }
 }
+
