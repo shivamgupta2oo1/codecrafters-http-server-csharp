@@ -28,15 +28,15 @@ class Program
                 string userAgent = GetUserAgent(request);
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
             }
-            else if (IsEchoStrawberryRequest(request))
+            else if (IsEchoRequest(request, "strawberry"))
             {
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nstrawberry";
             }
-            else if (IsEchoMangoRequest(request))
+            else if (IsEchoRequest(request, "mango"))
             {
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nmango";
             }
-            else if (IsEchoOrangeRequest(request))
+            else if (IsEchoRequest(request, "orange"))
             {
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n\r\norange";
             }
@@ -71,18 +71,8 @@ class Program
         return "";
     }
 
-    static bool IsEchoStrawberryRequest(string request)
+    static bool IsEchoRequest(string request, string value)
     {
-        return request.Contains("GET /echo/strawberry");
-    }
-
-    static bool IsEchoMangoRequest(string request)
-    {
-        return request.Contains("GET /echo/mango");
-    }
-
-    static bool IsEchoOrangeRequest(string request)
-    {
-        return request.Contains("GET /echo/orange");
+        return request.Contains($"GET /echo/{value}");
     }
 }
