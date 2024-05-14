@@ -36,6 +36,10 @@ class Program
             {
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nmango";
             }
+            else if (IsEchoOrangeRequest(request))
+            {
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n\r\norange";
+            }
             else
             {
                 response = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -75,5 +79,10 @@ class Program
     static bool IsEchoMangoRequest(string request)
     {
         return request.Contains("GET /echo/mango");
+    }
+
+    static bool IsEchoOrangeRequest(string request)
+    {
+        return request.Contains("GET /echo/orange");
     }
 }
