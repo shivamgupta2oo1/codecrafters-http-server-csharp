@@ -31,6 +31,10 @@ class Program
 
             // Prepare response with the requested string
             string responseString = string.IsNullOrEmpty(requestBody) ? requestedString : requestBody;
+
+            // Ensure the response length matches the expected length
+            responseString = responseString.Substring(0, Math.Min(responseString.Length, 9)); // Limit to 9 characters
+
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
 
             // Set the status code and description
@@ -53,15 +57,19 @@ class Program
     }
 
     static string GetRequestedString(string[] segments)
+{
+    string echoSegment = "echo/";
+    int echoIndex = Array.IndexOf(segments, echoSegment);
+
+    if (echoIndex >= 0 && echoIndex < segments.Length - 1)
     {
-        if (segments.Length >= 2 && segments[1] != "/")
-        {
-            return segments[1].Trim();
-        }
-        else
-        {
-            // If the URL doesn't have enough segments, return an empty string
-            return string.Empty;
-        }
+        return segments[echoIndex + 1].Trim();
     }
+    else
+    {
+        // If the URL doesn't contain "echo/" or doesn't have enough segments after "echo/", return an empty string
+        return string.Empty;
+    }
+}
+
 }
