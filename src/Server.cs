@@ -40,11 +40,9 @@ class Program
                 response.StatusDescription = "Not Found";
             }
 
-            // Set the status code before writing the response
-            response.StatusCode = (int)HttpStatusCode.OK;
-            response.StatusDescription = "OK";
-
+            // Set the content length dynamically based on the response string length
             response.ContentLength64 = buffer.Length;
+
             response.OutputStream.Write(buffer, 0, buffer.Length);
             response.OutputStream.Close();
             Console.WriteLine("Response sent.");
