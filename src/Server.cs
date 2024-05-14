@@ -40,6 +40,10 @@ class Program
             {
                 response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n\r\norange";
             }
+            else if (IsEchoRequest(request, "grape"))
+            {
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\ngrape";
+            }
             else
             {
                 response = "HTTP/1.1 404 Not Found\r\n\r\n";
