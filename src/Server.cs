@@ -22,27 +22,26 @@ class Program
 
             Console.WriteLine($"Received request: {request.Url}");
 
-            // Read the request body
-            string requestBody;
-            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-            {
-                requestBody = reader.ReadToEnd();
-            }
-
             // Prepare response with the requested string
-            string responseString = string.IsNullOrEmpty(requestBody) ? requestedString : requestBody;
-
-            // Ensure the response length matches the expected length
-            responseString = responseString.Substring(0, Math.Min(responseString.Length, 9)); // Limit to 9 characters
-
+            string responseString = requestedString; // Set the response string dynamically
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
-
-            // Set the status code and description
-            response.StatusCode = (int)HttpStatusCode.OK;
-            response.StatusDescription = "OK";
 
             // Set the content type header
             response.ContentType = "text/plain";
+
+            // Check if the requested resource exists
+            if (string.IsNullOrEmpty(requestedString))
+            {
+                // For the root URL ("/"), respond with a status code of 404
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+                response.StatusDescription = "Not Found";
+            }
+            else
+            {
+                // For other URLs, respond with a status code of 200
+                response.StatusCode = (int)HttpStatusCode.OK;
+                response.StatusDescription = "OK";
+            }
 
             // Set the content length header
             response.ContentLength64 = buffer.Length;
@@ -56,20 +55,16 @@ class Program
         }
     }
 
-    static string GetRequestedString(string[] segments)
+   private static string GetRequestedString(string[] segments)
 {
-    string echoSegment = "echo/";
-    int echoIndex = Array.IndexOf(segments, echoSegment);
-
-    if (echoIndex >= 0 && echoIndex < segments.Length - 1)
+    if (segments.Length >= 2 && segments[1] != "/")
     {
-        return segments[echoIndex + 1].Trim();
+        return segments[1].Trim('/');
     }
     else
     {
-        // If the URL doesn't contain "echo/" or doesn't have enough segments after "echo/", return an empty string
+        // If the URL doesn't have enough segments, return an empty string
         return string.Empty;
     }
 }
-
 }
