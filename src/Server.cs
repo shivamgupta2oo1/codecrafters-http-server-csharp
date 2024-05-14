@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 
 class Program
 {
@@ -32,29 +33,18 @@ class Program
 
     static string HandleRequest(string request)
     {
-        if (IsEchoRequest(request, out string echoValue))
+        if (IsUserAgentRequest(request, out string userAgent))
         {
-            return $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {echoValue.Length}\r\n\r\n{echoValue}";
+            return GenerateResponse(200, $"User-Agent: {userAgent}");
         }
-        else if (IsUserAgentRequest(request, out string userAgent))
+        else if (IsEchoRequest(request, out string echoValue))
         {
-            return $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
+            return GenerateResponse(200, echoValue);
         }
         else
         {
-            return "HTTP/1.1 404 Not Found\r\n\r\n";
+            return GenerateResponse(404, "");
         }
-    }
-
-    static bool IsEchoRequest(string request, out string value)
-    {
-        value = "";
-        if (request.StartsWith("GET /echo/"))
-        {
-            value = request.Substring(10).Trim();
-            return true;
-        }
-        return false;
     }
 
     static bool IsUserAgentRequest(string request, out string userAgent)
@@ -72,5 +62,34 @@ class Program
             }
         }
         return false;
+    }
+
+    static bool IsEchoRequest(string request, out string value)
+    {
+        value = "";
+        Match match = Regex.Match(request, @"GET /echo/(.+)");
+        if (match.Success)
+        {
+            value = match.Groups[1].Value.Trim();
+            return true;
+        }
+        return false;
+    }
+
+    static string GenerateResponse(int statusCode, string body)
+    {
+        string statusLine = $"HTTP/1.1 {statusCode} {GetStatusMessage(statusCode)}\r\n";
+        string headers = $"Content-Type: text/plain\r\nContent-Length: {Encoding.ASCII.GetByteCount(body)}\r\n\r\n";
+        return statusLine + headers + body;
+    }
+
+    static string GetStatusMessage(int statusCode)
+    {
+        switch (statusCode)
+        {
+            case 200: return "OK";
+            case 404: return "Not Found";
+            default: return "Unknown";
+        }
     }
 }
