@@ -80,7 +80,7 @@ static string GenerateResponse(int statusCode, string body)
 {
     string statusLine = $"HTTP/1.1 {statusCode} {GetStatusMessage(statusCode)}\r\n";
     string responseBody = body + "\r\n"; // Add CRLF at the end of the body
-    int contentLength = Encoding.ASCII.GetByteCount(responseBody) - 2; // Subtract 2 for the added CRLF
+    int contentLength = Encoding.ASCII.GetByteCount(responseBody); // Subtract 2 for the added CRLF
     string headers = $"Content-Type: text/plain\r\nContent-Length: {contentLength}\r\n\r\n";
     return statusLine + headers + responseBody;
 }
