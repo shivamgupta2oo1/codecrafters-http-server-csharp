@@ -23,7 +23,21 @@ class Program
 
                 string response = HandleRequest(request);
 
-                byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
+                // Print the response body for debugging (optional)
+                Console.WriteLine($"Response body: {response}");
+
+                byte[] responseBuffer;
+
+                // Option 1: Specify encoding if known (e.g., UTF-8)
+                // if (/* Test expects UTF-8 encoding */)
+                // {
+                //     responseBuffer = Encoding.UTF8.GetBytes(response);
+                // }
+                // else
+
+                // Option 2: Use ASCII encoding (default)
+                responseBuffer = Encoding.ASCII.GetBytes(response);
+
                 stream.Write(responseBuffer, 0, responseBuffer.Length);
 
                 Console.WriteLine("Response sent. Client disconnected.");
@@ -76,16 +90,14 @@ class Program
         return false;
     }
 
-static string GenerateResponse(int statusCode, string body)
-{
-    string statusLine = $"HTTP/1.1 {statusCode} {GetStatusMessage(statusCode)}\r\n";
-    string responseBody = body + "\r\n"; // Add CRLF at the end of the body
-    int contentLength = Encoding.ASCII.GetByteCount(responseBody); // Subtract 2 for the added CRLF
-    string headers = $"Content-Type: text/plain\r\nContent-Length: {contentLength}\r\n\r\n";
-    return statusLine + headers + responseBody;
-}
-
-
+    static string GenerateResponse(int statusCode, string body)
+    {
+        string statusLine = $"HTTP/1.1 {statusCode} {GetStatusMessage(statusCode)}\r\n";
+        string responseBody = body + "\r\n"; // Add CRLF at the end of the body
+        int contentLength = Encoding.ASCII.GetByteCount(responseBody); // Calculate content length
+        string headers = $"Content-Type: text/plain\r\nContent-Length: {contentLength}\r\n\r\n";
+        return statusLine + headers + responseBody;
+    }
 
     static string GetStatusMessage(int statusCode)
     {
