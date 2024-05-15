@@ -48,7 +48,11 @@ class Program
                 string path = ExtractPath(request);
                 string response;
 
-                if (path.StartsWith("/files/"))
+                if (path.Equals("/"))
+                {
+                    response = GenerateResponse("200 OK", "text/plain", "Nothing");
+                }
+                else if (path.StartsWith("/files/"))
                 {
                     string filename = path.Substring("/files/".Length);
                     string filePath = Path.Combine(directory, filename);
