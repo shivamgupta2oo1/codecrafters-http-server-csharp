@@ -17,6 +17,7 @@ internal class Program
         server.Start();
         byte[] data = new byte[1024]; // Increase buffer size for potential larger file uploads
         string RESP_200 = "HTTP/1.1 200 OK\r\n";
+        string RESP_201 = "HTTP/1.1 201 Created\r\n\r\n";
         string RESP_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
 
         while (true)
@@ -39,43 +40,78 @@ internal class Program
                 // Handle different actions based on request
                 switch (action)
                 {
-                    // Handle echo requests
+                    // Handle POST requests for files
+                    case "files":
+                        string directoryName = args.Length >= 2 ? args[1] : "";
+                        string fileName = Path.Combine(directoryName, requestParts[2]);
+                        string content = requestData[requestData.Length - 1];
+                        int contentLength = 0;
+                        foreach (string rData in requestData)
+                        {
+                            if (rData.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                contentLength = int.Parse(rData.Split(" ")[1]);
+                                break;
+                            }
+                        }
+                        File.WriteAllText(fileName, content.Substring(0, contentLength));
+                        status = RESP_201;
+                        byte[] response201 = Encoding.ASCII.GetBytes(status);
+                        stream.Write(response201, 0, response201.Length);
+                        break;
+                    // Handle GET requests for gzip-compressed echo
                     case "echo":
-                        string echoData = requestParts.Length >= 3 ? requestParts[2] : "";
-                        string acceptEncoding = "";
+                        string echoData = requestParts[2];
+                        string contentEncoding = "";
                         foreach (string rData in requestData)
                         {
                             if (rData.StartsWith("Accept-Encoding:", StringComparison.OrdinalIgnoreCase))
                             {
-                                acceptEncoding = rData.Split(":")[1].Trim().ToLower();
+                                // Extract the value of the Accept-Encoding header
+                                contentEncoding = rData.Split(":")[1].Trim().ToLower();
                                 break;
                             }
                         }
-                        bool gzipRequested = acceptEncoding.Contains("gzip");
+                        // Check if gzip compression is requested
+                        bool gzipRequested = contentEncoding.Contains("gzip");
+                        // Prepare the response with appropriate headers
                         StringBuilder responseBuilder = new StringBuilder();
                         responseBuilder.Append(RESP_200);
                         if (gzipRequested)
                         {
-                            // Compress the response body using gzip encoding
-                            byte[] gzipData = CompressStringToGZip(echoData);
-                            int gzipDataLength = gzipData.Length;
                             responseBuilder.Append("Content-Encoding: gzip\r\n");
-                            responseBuilder.Append($"Content-Length: {gzipDataLength}\r\n\r\n");
-                            byte[] headerBytes = Encoding.ASCII.GetBytes(responseBuilder.ToString());
-                            stream.Write(headerBytes, 0, headerBytes.Length);
-                            stream.Write(gzipData, 0, gzipData.Length);
+                            // Compress the response body using gzip encoding
+                            using (MemoryStream ms = new MemoryStream())
+                            {
+                                using (GZipStream gzip =
+                                    new GZipStream(ms, CompressionMode.Compress, true))
+                                {
+                                    byte[] bytes = Encoding.UTF8.GetBytes(echoData);
+                                    gzip.Write(bytes, 0, bytes.Length);
+                                }
+                                // Get the gzip compressed data
+                                byte[] gzipData = ms.ToArray();
+                                // Calculate the length of the gzip-encoded data
+                                int gzipDataLength = gzipData.Length;
+                                // Add headers for gzip encoding and content length
+                                responseBuilder.Append($"Content-Length: {gzipDataLength}\r\n\r\n");
+                                byte[] headerBytes =
+                                    Encoding.ASCII.GetBytes(responseBuilder.ToString());
+                                stream.Write(headerBytes, 0, headerBytes.Length);
+                                stream.Write(gzipData, 0, gzipData.Length);
+                            }
                         }
                         else
                         {
                             // If gzip encoding is not requested, send the response as plain text
-                            responseBuilder.Append("Content-Type: text/plain\r\n");
-                            responseBuilder.Append($"Content-Length: {echoData.Length}\r\n\r\n{echoData}");
+                            responseBuilder.Append(
+                                $"Content-Length: {echoData.Length}\r\n\r\n{echoData}");
                             status = responseBuilder.ToString();
                             byte[] response = Encoding.ASCII.GetBytes(status);
                             stream.Write(response, 0, response.Length);
                         }
                         break;
-                    // Handle unknown actions
+                    // Handle other actions (e.g., echo)
                     default:
                         status = RESP_404;
                         byte[] response404 = Encoding.ASCII.GetBytes(status);
@@ -83,20 +119,6 @@ internal class Program
                         break;
                 }
             }
-        }
-    }
-
-    // Compress a string using GZip
-    private static byte[] CompressStringToGZip(string text)
-    {
-        byte[] buffer = Encoding.UTF8.GetBytes(text);
-        using (MemoryStream memoryStream = new MemoryStream())
-        {
-            using (GZipStream gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
-            {
-                gzipStream.Write(buffer, 0, buffer.Length);
-            }
-            return memoryStream.ToArray();
         }
     }
 }
