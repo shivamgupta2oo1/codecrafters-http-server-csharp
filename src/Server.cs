@@ -4,108 +4,60 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 
-class Program
-{
-    static void Main(string[] args)
-    {
+class Program {
+    static void Main(string[] args) {
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
         server.Start();
         Console.WriteLine("Server started. Waiting for connections...");
-
-        while (true)
-        {
-            using (TcpClient client = server.AcceptTcpClient())
-            using (NetworkStream stream = client.GetStream())
-            {
-                byte[] buffer = new byte[1024];
-                int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-
-                string response = HandleRequest(request);
-
-                // Print the response body for debugging (optional)
-                Console.WriteLine($"Response body: {response}");
-
-                byte[] responseBuffer;
-
-                // Option 1: Specify encoding if known (e.g., UTF-8)
-                // if (/* Test expects UTF-8 encoding */)
-                // {
-                //     responseBuffer = Encoding.UTF8.GetBytes(response);
-                // }
-                // else
-
-                // Option 2: Use ASCII encoding (default)
-                responseBuffer = Encoding.ASCII.GetBytes(response);
-
-                stream.Write(responseBuffer, 0, responseBuffer.Length);
-
-                Console.WriteLine("Response sent. Client disconnected.");
-            }
-        }
-    }
-
-    static string HandleRequest(string request)
-    {
-        if (IsUserAgentRequest(request, out string userAgent))
-        {
-            return GenerateResponse(200, $"User-Agent: {userAgent}");
-        }
-        else if (IsEchoRequest(request, out string echoValue))
-        {
-            return GenerateResponse(200, echoValue);
-        }
-        else
-        {
-            return GenerateResponse(404, "");
-        }
-    }
-
-    static bool IsUserAgentRequest(string request, out string userAgent)
-    {
-        userAgent = "";
-        if (request.StartsWith("GET /user-agent"))
-        {
-            foreach (var line in request.Split('\n'))
-            {
-                if (line.StartsWith("User-Agent:"))
-                {
-                    userAgent = line.Substring("User-Agent:".Length).Trim();
-                    return true;
+        while (true) {
+            TcpClient client = server.AcceptTcpClient();
+            Console.WriteLine("Client connected.");
+            NetworkStream stream = client.GetStream();
+            // Read the request
+            byte[] buffer = new byte[1024];
+            int bytesRead = stream.Read(buffer, 0, buffer.Length);
+            string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+            // Extract the path from the request
+            string path = ExtractPath(request);
+            // Prepare the response
+            string response;
+            if (path == "/user-agent") {
+                // Extract User-Agent header
+                string userAgent = ExtractUserAgent(request);
+                if (!string.IsNullOrEmpty(userAgent)) {
+                    response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
+                } else {
+                    response = "HTTP/1.1 400 Bad Request\r\n\r\n";
                 }
+            } else if (path == "/") {
+                // Respond with 200 for root endpoint
+                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n";
+            } else {
+                // Respond with 404 for other paths
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
+            }
+            // Send the response
+            byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
+            stream.Write(responseBuffer, 0, responseBuffer.Length);
+            stream.Close();
+            client.Close();
+            Console.WriteLine("Response sent. Client disconnected.");
+        }
+    }
+
+    static string ExtractPath(string request) {
+        string[] lines = request.Split("\r\n");
+        string[] parts = lines[0].Split(" ");
+        return parts.Length > 1 ? parts[1] : "";
+    }
+
+    static string ExtractUserAgent(string request) {
+        string[] lines = request.Split("\r\n");
+        foreach (string line in lines) {
+            if (line.StartsWith("User-Agent:")) {
+                return line.Substring("User-Agent:".Length).Trim();
             }
         }
-        return false;
-    }
-
-    static bool IsEchoRequest(string request, out string value)
-    {
-        value = "";
-        Match match = Regex.Match(request, @"GET /echo/(.+)");
-        if (match.Success)
-        {
-            value = match.Groups[1].Value.Trim();
-            return true;
-        }
-        return false;
-    }
-
-    static string GenerateResponse(int statusCode, string body)
-    {
-        string statusLine = $"HTTP/1.1 {statusCode} {GetStatusMessage(statusCode)}\r\n";
-        string responseBody = body + "\r\n"; // Add CRLF at the end of the body
-        int contentLength = Encoding.ASCII.GetByteCount(responseBody); // Calculate content length
-        string headers = $"Content-Type: text/plain\r\nContent-Length: {contentLength}\r\n\r\n";
-        return statusLine + headers + responseBody;
-    }
-
-    static string GetStatusMessage(int statusCode)
-    {
-        switch (statusCode)
-        {
-            case 200: return "OK";
-            case 404: return "Not Found";
-            default: return "Unknown";
-        }
+        return null;
     }
 }
