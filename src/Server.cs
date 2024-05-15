@@ -72,7 +72,7 @@ class Program
                     if (File.Exists(filePath))
                     {
                         string fileContents = File.ReadAllText(filePath);
-                        byte[] response = generateResponse("200 OK", "text/plain", fileContents);
+                        byte[] response = generateResponse("200 OK", GetContentType(filename), fileContents);
                         await stream.WriteAsync(response, 0, response.Length);
                     }
                     else
@@ -113,5 +113,30 @@ class Program
         response += responseBody;
 
         return Encoding.UTF8.GetBytes(response);
+    }
+
+    static string GetContentType(string filename)
+    {
+        // Add more content types as needed
+        if (filename.EndsWith(".txt"))
+        {
+            return "text/plain";
+        }
+        else if (filename.EndsWith(".pdf"))
+        {
+            return "application/pdf";
+        }
+        else if (filename.EndsWith(".jpg") || filename.EndsWith(".jpeg"))
+        {
+            return "image/jpeg";
+        }
+        else if (filename.EndsWith(".png"))
+        {
+            return "image/png";
+        }
+        else
+        {
+            return "application/octet-stream";
+        }
     }
 }
