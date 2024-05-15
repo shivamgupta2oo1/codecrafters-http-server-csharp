@@ -32,9 +32,8 @@ internal class Program
                 string request = Encoding.ASCII.GetString(data, 0, bytesRead);
                 string[] requestData = request.Split("\r\n");
                 string requestURL = requestData[0].Split(" ")[1];
-                string[] requestArr = requestData[0].Split(" ");
-                string requestType = requestArr[0];
-                string action = requestURL.Split("/")[1];
+                string[] requestParts = requestURL.Split("/");
+                string action = requestParts.Length >= 2 ? requestParts[1] : "";
                 string status = "";
 
                 // Handle different actions based on request
@@ -53,7 +52,6 @@ internal class Program
                             break;
                         }
                         string directoryName = null;
-                        string[] argPairs;
                         for (int i = 0; i < args.Length; i++)
                         {
                             if (args[i] == "--directory" && i + 1 < args.Length)
@@ -67,25 +65,27 @@ internal class Program
                             status = RESP_404;
                             break;
                         }
-                        string fileName = Path.Combine(directoryName, requestURL.Split("/")[2]);
+                        string fileName = Path.Combine(directoryName, requestParts.Length >= 3 ? requestParts[2] : "");
 
                         // Log the constructed file path
                         Console.WriteLine($"File path: {fileName}");
 
-                        if (requestType == "GET")
+                        if (File.Exists(fileName))
                         {
-                            // Handle GET requests for files
-                            if (!File.Exists(fileName))
-                            {
-                                status = RESP_404;
-                            }
-                            else
-                            {
-                                string fileContent = File.ReadAllText(fileName);
-                                status = RESP_200 + "Content-Type: application/octet-stream\r\n";
-                                status += $"Content-Length: {fileContent.Length}\r\n\r\n{fileContent}";
-                            }
+                            string fileContent = File.ReadAllText(fileName);
+                            status = RESP_200 + "Content-Type: application/octet-stream\r\n";
+                            status += $"Content-Length: {fileContent.Length}\r\n\r\n{fileContent}";
                         }
+                        else
+                        {
+                            status = RESP_404;
+                        }
+                        break;
+
+                    // Handle echo requests
+                    case "echo":
+                        string echoMessage = requestParts.Length >= 3 ? requestParts[2] : "";
+                        status = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n\r\n{echoMessage}";
                         break;
 
                     // Handle requests for user agent
