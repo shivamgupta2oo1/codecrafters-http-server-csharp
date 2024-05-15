@@ -19,8 +19,15 @@ class Program
 
         if (!Directory.Exists(directory))
         {
-            Console.WriteLine("Directory not found.");
-            return;
+            try
+            {
+                Directory.CreateDirectory(directory);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating directory: {ex.Message}");
+                return;
+            }
         }
 
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
@@ -51,20 +58,27 @@ class Program
                 string filename = path.Substring("/files/".Length);
                 string filePath = Path.Combine(directory, filename);
 
-                if (File.Exists(filePath))
+                if (!File.Exists(filePath))
                 {
-                    byte[] fileBytes = File.ReadAllBytes(filePath);
-                    response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileBytes.Length}\r\n\r\n";
-                    byte[] responseHeaderBytes = Encoding.ASCII.GetBytes(response);
-                    await stream.WriteAsync(responseHeaderBytes, 0, responseHeaderBytes.Length);
-                    await stream.WriteAsync(fileBytes, 0, fileBytes.Length);
+                    try
+                    {
+                        File.WriteAllText(filePath, string.Empty);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error creating file: {ex.Message}");
+                        response = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
+                        byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                        return;
+                    }
                 }
-                else
-                {
-                    response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
-                }
+
+                byte[] fileBytes = File.ReadAllBytes(filePath);
+                response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileBytes.Length}\r\n\r\n";
+                byte[] responseHeaderBytes = Encoding.ASCII.GetBytes(response);
+                await stream.WriteAsync(responseHeaderBytes, 0, responseHeaderBytes.Length);
+                await stream.WriteAsync(fileBytes, 0, fileBytes.Length);
             }
             else
             {
