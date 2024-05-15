@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -53,7 +52,7 @@ internal class Program
                             status = RESP_404;
                             break;
                         }
-                        string directoryName = args[1];
+                        string directoryName = args[0]; // Change here
                         string fileName = Path.Combine(directoryName, requestURL.Split("/")[2]);
 
                         if (requestType == "GET")
