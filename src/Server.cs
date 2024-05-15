@@ -19,8 +19,16 @@ class Program
 
         if (!Directory.Exists(directory))
         {
-            Console.WriteLine("Directory not found.");
-            return;
+            try
+            {
+                Directory.CreateDirectory(directory);
+                Console.WriteLine($"Directory '{directory}' created successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to create directory: {ex.Message}");
+                return;
+            }
         }
 
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
