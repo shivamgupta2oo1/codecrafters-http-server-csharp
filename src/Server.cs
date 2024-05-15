@@ -79,7 +79,14 @@ while (true)
 
         if (fileContents.Length > 0)
         {
-            client.Send(generateResponse("200 OK", "application/octet-stream", fileContents));
+            byte[] responseBytes = generateResponse("200 OK", "application/octet-stream", fileContents);
+            int sentBytes = 0;
+            int totalBytesToSend = responseBytes.Length;
+            while (sentBytes < totalBytesToSend)
+            {
+                int bytesSent = client.Send(responseBytes, sentBytes, totalBytesToSend - sentBytes, SocketFlags.None);
+                sentBytes += bytesSent;
+            }
         }
         else
         {
