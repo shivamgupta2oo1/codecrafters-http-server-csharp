@@ -51,12 +51,14 @@ internal class Program
                             }
                         }
                         string responseHeaders = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n";
+
+                        // Check if client accepts gzip encoding
                         bool gzipAccepted = acceptEncoding.ToLower().Contains("gzip");
                         if (gzipAccepted)
                         {
                             responseHeaders += "Content-Encoding: gzip\r\n";
-                            echoMessage = CompressString(echoMessage);
                         }
+
                         responseHeaders += "\r\n";
                         status = responseHeaders + echoMessage;
 
@@ -74,22 +76,6 @@ internal class Program
                 byte[] response = Encoding.ASCII.GetBytes(status);
                 stream.Write(response, 0, response.Length);
             }
-        }
-    }
-
-    // Compress string using GZip
-    private static string CompressString(string text)
-    {
-        using (MemoryStream memoryStream = new MemoryStream())
-        {
-            using (System.IO.Compression.GZipStream gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress))
-            {
-                using (StreamWriter writer = new StreamWriter(gzipStream))
-                {
-                    writer.Write(text);
-                }
-            }
-            return Convert.ToBase64String(memoryStream.ToArray());
         }
     }
 }
