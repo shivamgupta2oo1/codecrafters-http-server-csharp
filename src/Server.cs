@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Linq;
 
 internal class Program
 {
@@ -107,7 +108,8 @@ internal class Program
                             }
                         }
                         string responseHeaders = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n";
-                        if (acceptEncoding.ToLower().Contains("gzip"))
+                        bool gzipAccepted = acceptEncoding.ToLower().Split(',').Any(e => e.Trim() == "gzip");
+                        if (gzipAccepted)
                         {
                             responseHeaders += "Content-Encoding: gzip\r\n";
                         }
