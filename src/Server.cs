@@ -24,15 +24,22 @@ class Program
             Console.WriteLine($"Directory '{directory}' created.");
         }
 
-        TcpListener server = new TcpListener(IPAddress.Any, 4221);
-        server.Start();
-        Console.WriteLine("Server started. Waiting for connections...");
-
-        while (true)
+        try
         {
-            TcpClient client = await server.AcceptTcpClientAsync();
-            Console.WriteLine("Client connected.");
-            _ = Task.Run(() => HandleClientAsync(client, directory));
+            TcpListener server = new TcpListener(IPAddress.Any, 4221);
+            server.Start();
+            Console.WriteLine("Server started. Waiting for connections...");
+
+            while (true)
+            {
+                TcpClient client = await server.AcceptTcpClientAsync();
+                Console.WriteLine("Client connected.");
+                _ = Task.Run(() => HandleClientAsync(client, directory));
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 
