@@ -19,16 +19,8 @@ class Program
 
         if (!Directory.Exists(directory))
         {
-            try
-            {
-                Directory.CreateDirectory(directory);
-                Console.WriteLine($"Directory '{directory}' created successfully.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to create directory: {ex.Message}");
-                return;
-            }
+            Console.WriteLine("Directory not found.");
+            return;
         }
 
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
@@ -61,25 +53,21 @@ class Program
 
                 if (File.Exists(filePath))
                 {
-                    byte[] fileBytes = File.ReadAllBytes(filePath);
-                    response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileBytes.Length}\r\n\r\n";
-                    byte[] responseHeaderBytes = Encoding.ASCII.GetBytes(response);
-                    await stream.WriteAsync(responseHeaderBytes, 0, responseHeaderBytes.Length);
-                    await stream.WriteAsync(fileBytes, 0, fileBytes.Length);
+                    string fileContents = File.ReadAllText(filePath);
+                    response = GenerateResponse("200 OK", "application/octet-stream", fileContents);
                 }
                 else
                 {
-                    response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                    response = GenerateResponse("404 Not Found", "text/plain", "File Not Found");
                 }
             }
             else
             {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-                await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                response = GenerateResponse("404 Not Found", "text/plain", "Not Found");
             }
+
+            byte[] responseBuffer = Encoding.UTF8.GetBytes(response);
+            await stream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
         }
         finally
         {
@@ -93,5 +81,15 @@ class Program
         string[] lines = request.Split("\r\n");
         string[] parts = lines[0].Split(" ");
         return parts.Length > 1 ? parts[1] : "";
+    }
+
+    static string GenerateResponse(string status, string contentType, string responseBody)
+    {
+        string response = $"HTTP/1.1 {status}\r\n";
+        response += $"Content-Type: {contentType}\r\n";
+        response += $"Content-Length: {responseBody.Length}\r\n";
+        response += "\r\n";
+        response += responseBody;
+        return response;
     }
 }
