@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -6,9 +7,22 @@ using System.Text.RegularExpressions;
 
 class Program {
     static void Main(string[] args) {
+        if (args.Length != 2 || args[0] != "--directory") {
+            Console.WriteLine("Usage: ./your_server.sh --directory <directory>");
+            return;
+        }
+
+        string directory = args[1];
+
+        if (!Directory.Exists(directory)) {
+            Console.WriteLine("Directory not found.");
+            return;
+        }
+
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
         server.Start();
         Console.WriteLine("Server started. Waiting for connections...");
+
         while (true) {
             TcpClient client = server.AcceptTcpClient();
             Console.WriteLine("Client connected.");
@@ -21,28 +35,30 @@ class Program {
             string path = ExtractPath(request);
             // Prepare the response
             string response;
-            if (path == "/user-agent") {
-                // Extract User-Agent header
-                string userAgent = ExtractUserAgent(request);
-                if (!string.IsNullOrEmpty(userAgent)) {
-                    response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
+            if (path.StartsWith("/files/")) {
+                // Extract filename
+                string filename = path.Substring("/files/".Length);
+                string filePath = Path.Combine(directory, filename);
+                if (File.Exists(filePath)) {
+                    // Read file contents
+                    byte[] fileBytes = File.ReadAllBytes(filePath);
+                    // Prepare response with file contents
+                    response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileBytes.Length}\r\n\r\n";
+                    byte[] responseHeaderBytes = Encoding.ASCII.GetBytes(response);
+                    stream.Write(responseHeaderBytes, 0, responseHeaderBytes.Length);
+                    stream.Write(fileBytes, 0, fileBytes.Length);
                 } else {
-                    response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+                    // File not found
+                    response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                    byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                    stream.Write(responseBytes, 0, responseBytes.Length);
                 }
-            } else if (path.StartsWith("/echo/")) {
-                // Extract echo message from path
-                string echoMessage = path.Substring("/echo/".Length);
-                response = $"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n\r\n{echoMessage}";
-            } else if (path == "/") {
-                // Respond with 200 for root endpoint
-                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n";
             } else {
                 // Respond with 404 for other paths
                 response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                stream.Write(responseBytes, 0, responseBytes.Length);
             }
-            // Send the response
-            byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
-            stream.Write(responseBuffer, 0, responseBuffer.Length);
             stream.Close();
             client.Close();
             Console.WriteLine("Response sent. Client disconnected.");
@@ -53,15 +69,5 @@ class Program {
         string[] lines = request.Split("\r\n");
         string[] parts = lines[0].Split(" ");
         return parts.Length > 1 ? parts[1] : "";
-    }
-
-    static string ExtractUserAgent(string request) {
-        string[] lines = request.Split("\r\n");
-        foreach (string line in lines) {
-            if (line.StartsWith("User-Agent:")) {
-                return line.Substring("User-Agent:".Length).Trim();
-            }
-        }
-        return null;
     }
 }
