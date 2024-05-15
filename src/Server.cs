@@ -120,9 +120,7 @@ internal class Program
                     if (gzipRequested)
                     {
                         // If gzip encoding is requested, compress the response body using gzip encoding
-                        responseBuilder.Append(RESP_200);
-                        responseBuilder.Append("Content-Encoding: gzip\r\n");
-
+                        byte[] gzipData;
                         using (MemoryStream ms = new MemoryStream())
                         {
                             using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress, true))
@@ -131,33 +129,24 @@ internal class Program
                                 gzip.Write(bytes, 0, bytes.Length);
                             }
                             // Get the gzip compressed data
-                            byte[] gzipData = ms.ToArray();
-
-                            // Convert gzip data to hex representation
-                            StringBuilder hexBuilder = new StringBuilder();
-                            foreach (byte b in gzipData)
-                            {
-                                hexBuilder.AppendFormat("{0:x2}", b);
-                            }
-                            string gzipHexData = hexBuilder.ToString();
-
-                            // Calculate the length of the gzip-encoded data
-                            int gzipDataLength = gzipData.Length;
-
-                            // Add headers for gzip encoding and content length
-                            responseBuilder.Append($"Content-Length: {gzipDataLength}\r\n\r\n{gzipHexData}");
-
-                            status = responseBuilder.ToString();
+                            gzipData = ms.ToArray();
                         }
+
+                        // Convert gzip data to base64 string
+                        string base64GzipData = Convert.ToBase64String(gzipData);
+
+                        responseBuilder.Append(RESP_200);
+                        responseBuilder.Append("Content-Encoding: gzip\r\n");
+                        responseBuilder.Append($"Content-Length: {base64GzipData.Length}\r\n\r\n{base64GzipData}");
                     }
                     else
                     {
                         // If gzip encoding is not requested, send the response as plain text
                         responseBuilder.Append(RESP_200);
                         responseBuilder.Append($"Content-Type: text/plain\r\nContent-Length: {echoData.Length}\r\n\r\n{echoData}");
-                        status = responseBuilder.ToString();
                     }
 
+                    status = responseBuilder.ToString();
                     break;
 
                 // Handle unknown actions
