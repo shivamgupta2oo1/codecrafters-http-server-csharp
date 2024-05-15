@@ -11,7 +11,7 @@ class Program
     {
         if (args.Length != 2 || args[0] != "--directory")
         {
-            Console.WriteLine("Usage: ./your_server.sh --directory <directory>");
+            Console.WriteLine("Usage: dotnet run -- --directory <directory>");
             return;
         }
 
@@ -27,22 +27,11 @@ class Program
         server.Start();
         Console.WriteLine("Server started. Waiting for connections...");
 
-        try
+        while (true)
         {
-            while (true)
-            {
-                TcpClient client = await server.AcceptTcpClientAsync();
-                Console.WriteLine("Client connected.");
-                _ = Task.Run(() => HandleClientAsync(client, directory));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
-        finally
-        {
-            server.Stop();
+            TcpClient client = await server.AcceptTcpClientAsync();
+            Console.WriteLine("Client connected.");
+            _ = Task.Run(() => HandleClientAsync(client, directory));
         }
     }
 
@@ -50,51 +39,39 @@ class Program
     {
         try
         {
-            using (NetworkStream stream = client.GetStream())
+            NetworkStream stream = client.GetStream();
+            byte[] buffer = new byte[1024];
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+            string path = ExtractPath(request);
+            string response;
+
+            if (path.StartsWith("/files/"))
             {
-                // Read the request asynchronously
-                byte[] buffer = new byte[1024];
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                // Extract the path from the request
-                string path = ExtractPath(request);
-                // Prepare the response
-                string response;
-                if (path.StartsWith("/files/"))
+                string filename = path.Substring("/files/".Length);
+                string filePath = Path.Combine(directory, filename);
+
+                if (File.Exists(filePath))
                 {
-                    // Extract filename
-                    string filename = path.Substring("/files/".Length);
-                    string filePath = Path.Combine(directory, filename);
-                    if (File.Exists(filePath))
-                    {
-                        // Read file contents
-                        byte[] fileBytes = File.ReadAllBytes(filePath);
-                        // Prepare response with file contents
-                        response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileBytes.Length}\r\n\r\n";
-                        byte[] responseHeaderBytes = Encoding.ASCII.GetBytes(response);
-                        await stream.WriteAsync(responseHeaderBytes, 0, responseHeaderBytes.Length);
-                        await stream.WriteAsync(fileBytes, 0, fileBytes.Length);
-                    }
-                    else
-                    {
-                        // File not found
-                        response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                        byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
-                    }
+                    byte[] fileBytes = File.ReadAllBytes(filePath);
+                    response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileBytes.Length}\r\n\r\n";
+                    byte[] responseHeaderBytes = Encoding.ASCII.GetBytes(response);
+                    await stream.WriteAsync(responseHeaderBytes, 0, responseHeaderBytes.Length);
+                    await stream.WriteAsync(fileBytes, 0, fileBytes.Length);
                 }
                 else
                 {
-                    // Respond with 404 for other paths
                     response = "HTTP/1.1 404 Not Found\r\n\r\n";
                     byte[] responseBytes = Encoding.ASCII.GetBytes(response);
                     await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred while handling client request: {ex.Message}");
+            else
+            {
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+            }
         }
         finally
         {
