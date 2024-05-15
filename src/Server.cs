@@ -97,7 +97,22 @@ internal class Program
                     // Handle echo requests
                     case "echo":
                         string echoMessage = requestParts.Length >= 3 ? requestParts[2] : "";
-                        status = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n\r\n{echoMessage}";
+                        string acceptEncoding = "";
+                        foreach (string rData in requestData)
+                        {
+                            if (rData.StartsWith("Accept-Encoding:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                acceptEncoding = rData.Split(" ")[1];
+                                break;
+                            }
+                        }
+                        string responseHeaders = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n";
+                        if (acceptEncoding.ToLower().Contains("gzip"))
+                        {
+                            responseHeaders += "Content-Encoding: gzip\r\n";
+                        }
+                        responseHeaders += "\r\n";
+                        status = responseHeaders + echoMessage;
                         break;
 
                     // Handle requests for user agent
