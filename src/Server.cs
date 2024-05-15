@@ -119,7 +119,7 @@ internal class Program
                     StringBuilder responseBuilder = new StringBuilder();
                     if (gzipRequested)
                     {
-                        // If gzip encoding is requested, prepare the response with gzip encoding
+                        // If gzip encoding is requested, compress the response body using gzip encoding
                         responseBuilder.Append(RESP_200);
                         responseBuilder.Append("Content-Encoding: gzip\r\n");
 
@@ -133,16 +133,21 @@ internal class Program
                             // Get the gzip compressed data
                             byte[] gzipData = ms.ToArray();
 
+                            // Convert gzip data to hex representation
+                            StringBuilder hexBuilder = new StringBuilder();
+                            foreach (byte b in gzipData)
+                            {
+                                hexBuilder.AppendFormat("{0:x2}", b);
+                            }
+                            string gzipHexData = hexBuilder.ToString();
+
                             // Calculate the length of the gzip-encoded data
                             int gzipDataLength = gzipData.Length;
 
                             // Add headers for gzip encoding and content length
-                            responseBuilder.Append($"Content-Length: {gzipDataLength}\r\n\r\n");
+                            responseBuilder.Append($"Content-Length: {gzipDataLength}\r\n\r\n{gzipHexData}");
 
-                            byte[] headerBytes = Encoding.ASCII.GetBytes(responseBuilder.ToString());
-                            stream.Write(headerBytes, 0, headerBytes.Length);
-
-                            stream.Write(gzipData, 0, gzipData.Length);
+                            status = responseBuilder.ToString();
                         }
                     }
                     else
