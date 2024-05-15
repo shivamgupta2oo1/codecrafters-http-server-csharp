@@ -55,30 +55,31 @@ class Program
 
                     if (File.Exists(filePath))
                     {
-                        var responseObj = HandleGetRequest(filePath);
-                        using (var writer = new StreamWriter(stream))
-                        {
-                            writer.Write($"HTTP/1.1 {responseObj.Message}\r\n");
-                            writer.Write($"Content-Type: {responseObj.ContentType}\r\n");
-                            writer.Write($"Content-Length: {responseObj.ContentLength}\r\n");
-                            writer.Write("\r\n");
-                            await writer.WriteAsync(Encoding.UTF8.GetString(responseObj.Content));
-                            await writer.FlushAsync();
-                        }
+                        string fileContents = ReadFile(filePath);
+                        response = GenerateResponse("200 OK", "application/octet-stream", fileContents);
                     }
                     else
                     {
-                        response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                        byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                        response = GenerateResponse("404 Not Found", "text/plain", "File Not Found");
                     }
+                }
+                else if (path.Equals("/user-agent"))
+                {
+                    string userAgent = GetUserAgent(request);
+                    response = GenerateResponse("200 OK", "text/plain", userAgent);
+                }
+                else if (path.StartsWith("/echo"))
+                {
+                    string word = path.Split("/")[2];
+                    response = GenerateResponse("200 OK", "text/plain", word);
                 }
                 else
                 {
-                    response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                    response = GenerateResponse("404 Not Found", "text/plain", "Nothing Dipshit");
                 }
+
+                byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
             }
         }
         catch (Exception ex)
@@ -99,31 +100,30 @@ class Program
         return parts.Length > 1 ? parts[1] : "";
     }
 
-    static Response HandleGetRequest(string filePath)
+    static string ReadFile(string filePath)
     {
-        try
-        {
-            var buffer = File.ReadAllBytes(filePath);
-
-            return new Response
-            {
-                Status = 200,
-                Content = buffer,
-                ContentType = "application/octet-stream"
-            };
-        }
-        catch (Exception)
-        {
-            return new Response { Status = 500 }; // Internal Server Error
-        }
+        return File.ReadAllText(filePath);
     }
-}
 
-class Response
-{
-    public byte[] Content { get; set; } = new byte[] { };
-    public string ContentType { get; set; } = "text/plain";
-    public int ContentLength => Content.Length;
-    public string Message => $"{Status} {Status switch { 200 => "OK", 404 => "Not Found", 500 => "Internal Server Error" }}";
-    public int Status { get; set; }
+    static string GetUserAgent(string request)
+    {
+        string[] lines = request.Split("\r\n");
+        return lines[2].Split(" ")[1];
+    }
+
+    static string GenerateResponse(string status, string contentType, string responseBody)
+    {
+        // Status Line
+        string response = $"HTTP/1.1 {status}\r\n";
+
+        // Headers
+        response += $"Content-Type: {contentType}\r\n";
+        response += $"Content-Length: {responseBody.Length}\r\n";
+        response += "\r\n";
+
+        // Response Body
+        response += responseBody;
+
+        return response;
+    }
 }
