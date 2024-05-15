@@ -17,10 +17,11 @@ class Program
 
         string directory = args[1];
 
+        // Create the directory if it doesn't exist
         if (!Directory.Exists(directory))
         {
-            Console.WriteLine("Directory not found.");
-            return;
+            Directory.CreateDirectory(directory);
+            Console.WriteLine($"Directory '{directory}' created.");
         }
 
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
@@ -54,7 +55,7 @@ class Program
 
                     if (File.Exists(filePath))
                     {
-                        var responseObj = HandleRequest(filePath);
+                        var responseObj = HandleGetRequest(filePath);
                         using (var writer = new StreamWriter(stream))
                         {
                             writer.Write($"HTTP/1.1 {responseObj.Message}\r\n");
@@ -98,7 +99,7 @@ class Program
         return parts.Length > 1 ? parts[1] : "";
     }
 
-    static Response HandleRequest(string filePath)
+    static Response HandleGetRequest(string filePath)
     {
         try
         {
