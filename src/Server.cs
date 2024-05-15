@@ -108,7 +108,7 @@ internal class Program
                             }
                         }
                         string responseHeaders = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {echoMessage.Length}\r\n";
-                        bool gzipAccepted = acceptEncoding.ToLower().Split(',').Any(e => e.Trim() == "gzip");
+                        bool gzipAccepted = acceptEncoding.ToLower().Contains("gzip");
                         if (gzipAccepted)
                         {
                             responseHeaders += "Content-Encoding: gzip\r\n";
