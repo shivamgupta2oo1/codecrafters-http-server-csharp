@@ -55,6 +55,9 @@ internal class Program
                         string directoryName = args[0]; // Change here
                         string fileName = Path.Combine(directoryName, requestURL.Split("/")[2]);
 
+                        // Log the constructed file path
+                        Console.WriteLine($"File path: {fileName}");
+
                         if (requestType == "GET")
                         {
                             // Handle GET requests for files
