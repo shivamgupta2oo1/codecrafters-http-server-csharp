@@ -10,13 +10,13 @@ byte[] generateResponse(string status, string contentType, string responseBody)
 
     // Headers
     response += $"Content-Type: {contentType}\r\n";
-    response += $"Content-Length: {responseBody.Length}\r\n";
+    response += $"Content-Length: {responseBody.Length}\r\n"; // This line uses responseBody.Length to get the actual byte length
     response += "\r\n";
 
     // Response Body
     response += responseBody;
 
-    return Encoding.UTF8.GetBytes(response);
+    return Encoding.UTF8.GetBytes(response); // This line converts the string response to a byte array
 }
 
 string readFile(string filepath)
@@ -84,7 +84,7 @@ while (true)
             int totalBytesToSend = responseBytes.Length;
             while (sentBytes < totalBytesToSend)
             {
-                int bytesSent = client.Send(client.Send(responseBytes, sentBytes, totalBytesToSend - sentBytes, SocketFlags.None));
+                int bytesSent = client.Send(responseBytes, sentBytes, totalBytesToSend - sentBytes, SocketFlags.None);
                 sentBytes += bytesSent;
             }
         }
