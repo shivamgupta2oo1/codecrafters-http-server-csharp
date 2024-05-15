@@ -52,7 +52,7 @@ internal class Program
                             status = RESP_404;
                             break;
                         }
-                        string directoryName = args[0]; // Change here
+                        string directoryName = args[0];
                         string fileName = Path.Combine(directoryName, requestURL.Split("/")[2]);
 
                         // Log the constructed file path
@@ -68,7 +68,7 @@ internal class Program
                             else
                             {
                                 string fileContent = File.ReadAllText(fileName);
-                                status = RESP_200 + "Content-Type: application/octet-stream\r\n";
+                                status = RESP_200 + "Content-Type: text/plain\r\n";
                                 status += $"Content-Length: {fileContent.Length}\r\n\r\n{fileContent}";
                             }
                         }
