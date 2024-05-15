@@ -9,11 +9,26 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        // ... (rest of the code)
+        if (args.Length != 2 || args[0] != "--directory")
+        {
+            Console.WriteLine("Usage: dotnet run -- --directory <directory>");
+            return;
+        }
+
+        string directory = args[1];
+
+        // Create the directory if it doesn't exist
+        if (!Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+            Console.WriteLine($"Directory '{directory}' created.");
+        }
 
         try
         {
-            // ... (server setup)
+            TcpListener server = new TcpListener(IPAddress.Any, 4221);
+            server.Start();
+            Console.WriteLine("Server started. Waiting for connections...");
 
             while (true)
             {
@@ -38,9 +53,9 @@ class Program
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                 string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
 
-                // ... (process request and generate response)
+                // ... (Process request and generate response)
 
-                // **Ensure complete response is written**
+                // Ensure complete response is written
                 byte[] responseBytes = Encoding.ASCII.GetBytes(response);
                 await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
             }
@@ -56,5 +71,5 @@ class Program
         }
     }
 
-    // ... (rest of the code for handling requests and responses)
+    // ... (Rest of the code for handling requests and responses)
 }
