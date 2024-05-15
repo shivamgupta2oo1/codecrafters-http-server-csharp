@@ -25,10 +25,8 @@ class Program
 
         while (true)
         {
-            Console.Write("Waiting for a connection... ");
             TcpClient client = await server.AcceptTcpClientAsync();
-            Console.WriteLine("Connected!");
-            _ = HandleClient(client, directory);
+            Task.Run(() => HandleClient(client, directory)); // Handle each client connection in a separate task
         }
     }
 
