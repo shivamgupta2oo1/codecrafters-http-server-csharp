@@ -39,43 +39,50 @@ class Program
     {
         try
         {
-            NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024];
-            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-            string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-            string path = ExtractPath(request);
-            string response;
-
-            if (path.StartsWith("/files/"))
+            using (NetworkStream stream = client.GetStream())
             {
-                string filename = path.Substring("/files/".Length);
-                string filePath = Path.Combine(directory, filename);
+                byte[] buffer = new byte[1024];
+                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                string request = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                string path = ExtractPath(request);
+                string response;
 
-                if (File.Exists(filePath))
+                if (path.StartsWith("/files/"))
                 {
-                    var responseObj = HandleRequest(buffer, args);
-                    var writer = new StreamWriter(stream);
-                    writer.Write($"HTTP/1.1 {responseObj.Message}\r\n");
-                    writer.Write($"Content-Type: {responseObj.ContentType}\r\n");
-                    writer.Write($"Content-Length: {responseObj.ContentLength}\r\n");
-                    writer.Write("\r\n");
-                    writer.Write(Encoding.UTF8.GetString(responseObj.Content));
-                    writer.Flush();
-                    stream.Dispose();
-                    client.Dispose();
+                    string filename = path.Substring("/files/".Length);
+                    string filePath = Path.Combine(directory, filename);
+
+                    if (File.Exists(filePath))
+                    {
+                        var responseObj = HandleRequest(filePath);
+                        using (var writer = new StreamWriter(stream))
+                        {
+                            writer.Write($"HTTP/1.1 {responseObj.Message}\r\n");
+                            writer.Write($"Content-Type: {responseObj.ContentType}\r\n");
+                            writer.Write($"Content-Length: {responseObj.ContentLength}\r\n");
+                            writer.Write("\r\n");
+                            await writer.WriteAsync(Encoding.UTF8.GetString(responseObj.Content));
+                            await writer.FlushAsync();
+                        }
+                    }
+                    else
+                    {
+                        response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                        byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                    }
                 }
                 else
                 {
                     response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                    byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
                 }
             }
-            else
-            {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
-            }
-
-            byte[] responseBytes = Encoding.ASCII.GetBytes(response);
-            await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
         }
         finally
         {
@@ -91,54 +98,23 @@ class Program
         return parts.Length > 1 ? parts[1] : "";
     }
 
-    static Response HandleRequest(byte[] requestBuffer, string[] args)
+    static Response HandleRequest(string filePath)
     {
-        var req = Encoding.UTF8.GetString(requestBuffer).Split("\r\n");
-        var path = req[0].Split(" ")[1];
-
-        if (path.StartsWith("/echo/"))
+        try
         {
-            path = path.Substring(1, path.Length - 1);
-            var content = path.Split('/')[1];
-            if (string.IsNullOrEmpty(content))
-                return new Response { Status = 400 };
-            return new Response { Status = 200, Content = Encoding.UTF8.GetBytes(content) };
-        }
-        else if (path.StartsWith("/files/"))
-        {
-            var content = path.Substring("/files/".Length);
-            if (string.IsNullOrEmpty(content))
-                return new Response { Status = 400 };
-            var directory = args[1];
-            string filePath = Path.Combine(directory, content);
-
-            if (!File.Exists(filePath))
-            {
-                return new Response
-                {
-                    Status = 404
-                };
-            }
-
-            var stream = File.OpenRead(filePath);
-            var buffer = new byte[1024];
-            var length = stream.Read(buffer);
-            buffer = buffer.Take(length).ToArray();
+            var buffer = File.ReadAllBytes(filePath);
 
             return new Response
             {
                 Status = 200,
-                Content = buffer.ToArray(),
+                Content = buffer,
                 ContentType = "application/octet-stream"
             };
         }
-        else if (path.StartsWith("/user-agent"))
+        catch (Exception)
         {
-            var userAgent = req[2].Split(" ")[1];
-            return new Response { Status = 200, Content = Encoding.UTF8.GetBytes(userAgent) };
+            return new Response { Status = 500 }; // Internal Server Error
         }
-
-        return new Response { Status = 404 };
     }
 }
 
@@ -147,6 +123,6 @@ class Response
     public byte[] Content { get; set; } = new byte[] { };
     public string ContentType { get; set; } = "text/plain";
     public int ContentLength => Content.Length;
-    public string Message => $"{Status} {Status switch { 200 => "OK", 404 => "Not Found", 400 => "Wrong input" }}";
+    public string Message => $"{Status} {Status switch { 200 => "OK", 404 => "Not Found", 500 => "Internal Server Error" }}";
     public int Status { get; set; }
 }
