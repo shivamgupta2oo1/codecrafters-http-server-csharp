@@ -9,155 +9,89 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        // when running tests.
+        // When running tests.
         Console.WriteLine("Logs from your program will appear here!");
 
         // Start TCP server
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
         server.Start();
-        byte[] data = new byte[256];
+        byte[] data = new byte[1024]; // Increase buffer size for potential larger file uploads
         string RESP_200 = "HTTP/1.1 200 OK\r\n";
-        string RESP_201 = "HTTP/1.1 201 Created\r\n\r\n";
         string RESP_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
 
         while (true)
         {
             Console.Write("Waiting for a connection... ");
-            using TcpClient client = server.AcceptTcpClient();
-            NetworkStream stream = client.GetStream();
-            Console.WriteLine("Connected!");
-
-            // Read request data
-            int bytesRead = stream.Read(data, 0, data.Length);
-            string request = Encoding.ASCII.GetString(data, 0, bytesRead);
-            string[] requestData = request.Split("\r\n");
-            string requestURL = requestData[0].Split(" ")[1];
-            string[] requestArr = requestData[0].Split(" ");
-            string requestType = requestArr[0];
-            string action = requestURL.Split("/")[1];
-            string status = "";
-
-            // Handle different actions based on request
-            switch (action)
+            using (TcpClient client = server.AcceptTcpClient())
+            using (NetworkStream stream = client.GetStream())
             {
-                // Handle root action
-                case "":
-                    status = RESP_200 + "\r\n";
-                    break;
+                Console.WriteLine("Connected!");
 
-                // Handle requests for files
-                case "files":
-                    string directoryName = args[1];
-                    string fileName = Path.Combine(directoryName, requestURL.Split("/")[2]);
+                // Read request data
+                int bytesRead = stream.Read(data, 0, data.Length);
+                string request = Encoding.ASCII.GetString(data, 0, bytesRead);
+                string[] requestData = request.Split("\r\n");
+                string requestURL = requestData[0].Split(" ")[1];
+                string[] requestParts = requestURL.Split("/");
+                string action = requestParts.Length >= 2 ? requestParts[1] : "";
+                string status = "";
 
-                    if (requestType == "GET")
-                    {
-                        // Handle GET requests for files
-                        if (!File.Exists(fileName))
-                        {
-                            status = RESP_404;
-                        }
-                        else
-                        {
-                            string fileContent = File.ReadAllText(fileName);
-                            status = RESP_200 + "Content-Type: application/octet-stream\r\n";
-                            status += $"Content-Length: {fileContent.Length}\r\n\r\n{fileContent}";
-                        }
-                    }
-                    else if (requestType == "POST")
-                    {
-                        // Handle POST requests for files
-                        string content = requestData[requestData.Length - 1];
-                        int length = 0;
-
+                // Handle different actions based on request
+                switch (action)
+                {
+                    // Handle echo requests
+                    case "echo":
+                        string echoMessage = requestParts.Length >= 3 ? requestParts[2] : "";
+                        string acceptEncoding = "";
                         foreach (string rData in requestData)
                         {
-                            if (rData.Contains("Content-Length"))
+                            if (rData.StartsWith("Accept-Encoding:", StringComparison.OrdinalIgnoreCase))
                             {
-                                length = int.Parse(rData.Split(" ")[1]);
+                                acceptEncoding = rData.Split(" ")[1];
                                 break;
                             }
                         }
+                        string responseHeaders = RESP_200 + $"Content-Type: text/plain\r\n";
 
-                        File.WriteAllText(fileName, content.Substring(0, length));
-                        status = RESP_201;
-                    }
-                    break;
-
-                // Handle requests for user agent
-                case "user-agent":
-                    string userAgent = "";
-                    foreach (string rData in requestData)
-                    {
-                        if (rData.Contains("User-Agent"))
+                        // Check if client accepts gzip encoding
+                        bool gzipAccepted = acceptEncoding.ToLower().Contains("gzip");
+                        if (gzipAccepted)
                         {
-                            userAgent = rData.Split(" ")[1];
-                            break;
-                        }
-                    }
-                    status = RESP_200 + $"Content-Type: text/plain\r\nContent-Length: {userAgent.Length}\r\n\r\n{userAgent}";
-                    break;
-
-                // Handle echo action
-                case "echo":
-                    string echoData = requestURL.Split("/")[2];
-                    string contentEncoding = "";
-                    foreach (string rData in requestData)
-                    {
-                        if (rData.StartsWith("Accept-Encoding:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Extract the value of the Accept-Encoding header
-                            contentEncoding = rData.Split(":")[1].Trim().ToLower();
-                            break;
-                        }
-                    }
-
-                    // Check if gzip compression is requested
-                    bool gzipRequested = contentEncoding.Contains("gzip");
-
-                    // Prepare the response with appropriate headers
-                    StringBuilder responseBuilder = new StringBuilder();
-                    if (gzipRequested)
-                    {
-                        // If gzip encoding is requested, compress the response body using gzip encoding
-                        byte[] gzipData;
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress, true))
-                            {
-                                byte[] bytes = Encoding.UTF8.GetBytes(echoData);
-                                gzip.Write(bytes, 0, bytes.Length);
-                            }
-                            // Get the gzip compressed data
-                            gzipData = ms.ToArray();
+                            responseHeaders += "Content-Encoding: gzip\r\n";
+                            echoMessage = CompressStringToGZip(echoMessage);
                         }
 
-                        // Convert gzip data to base64 string
-                        string base64GzipData = Convert.ToBase64String(gzipData);
+                        responseHeaders += $"Content-Length: {echoMessage.Length}\r\n\r\n";
+                        status = responseHeaders + echoMessage;
 
-                        responseBuilder.Append(RESP_200);
-                        responseBuilder.Append("Content-Encoding: gzip\r\n");
-                        responseBuilder.Append($"Content-Length: {base64GzipData.Length}\r\n\r\n{base64GzipData}");
-                    }
-                    else
-                    {
-                        // If gzip encoding is not requested, send the response as plain text
-                        responseBuilder.Append(RESP_200);
-                        responseBuilder.Append($"Content-Type: text/plain\r\nContent-Length: {echoData.Length}\r\n\r\n{echoData}");
-                    }
+                        // Print out response headers for debugging
+                        Console.WriteLine($"Response headers: {responseHeaders}");
+                        break;
 
-                    status = responseBuilder.ToString();
-                    break;
+                    // Handle unknown actions
+                    default:
+                        status = RESP_404;
+                        break;
+                }
 
-                // Handle unknown actions
-                default:
-                    status = RESP_404;
-                    break;
+                // Write response to the client
+                byte[] response = Encoding.ASCII.GetBytes(status);
+                stream.Write(response, 0, response.Length);
             }
+        }
+    }
 
-            // Send back a response
-            byte[] response = Encoding.ASCII.GetBytes(status);
-            stream.Write(response, 0, response.Length);
+    // Compress a string using GZip
+    private static string CompressStringToGZip(string text)
+    {
+        byte[] buffer = Encoding.UTF8.GetBytes(text);
+        using (MemoryStream memoryStream = new MemoryStream())
+        {
+            using (GZipStream gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
+            {
+                gzipStream.Write(buffer, 0, buffer.Length);
+            }
+            return Convert.ToBase64String(memoryStream.ToArray());
         }
     }
 }
