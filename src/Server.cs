@@ -9,7 +9,7 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        // When running tests.
+        // Print statements for debugging
         Console.WriteLine("Logs from your program will appear here!");
 
         // Start TCP server
@@ -41,48 +41,53 @@ internal class Program
                 {
                     // Handle echo requests
                     case "echo":
-                        string echoMessage = requestParts.Length >= 3 ? requestParts[2] : "";
+                        string echoData = requestParts.Length >= 3 ? requestParts[2] : "";
                         string acceptEncoding = "";
                         foreach (string rData in requestData)
                         {
                             if (rData.StartsWith("Accept-Encoding:", StringComparison.OrdinalIgnoreCase))
                             {
-                                acceptEncoding = rData.Split(" ")[1];
+                                acceptEncoding = rData.Split(":")[1].Trim().ToLower();
                                 break;
                             }
                         }
-                        string responseHeaders = RESP_200 + $"Content-Type: text/plain\r\n";
-
-                        // Check if client accepts gzip encoding
-                        bool gzipAccepted = acceptEncoding.ToLower().Contains("gzip");
-                        if (gzipAccepted)
+                        bool gzipRequested = acceptEncoding.Contains("gzip");
+                        StringBuilder responseBuilder = new StringBuilder();
+                        responseBuilder.Append(RESP_200);
+                        if (gzipRequested)
                         {
-                            responseHeaders += "Content-Encoding: gzip\r\n";
-                            echoMessage = CompressStringToGZip(echoMessage);
+                            // Compress the response body using gzip encoding
+                            byte[] gzipData = CompressStringToGZip(echoData);
+                            int gzipDataLength = gzipData.Length;
+                            responseBuilder.Append("Content-Encoding: gzip\r\n");
+                            responseBuilder.Append($"Content-Length: {gzipDataLength}\r\n\r\n");
+                            byte[] headerBytes = Encoding.ASCII.GetBytes(responseBuilder.ToString());
+                            stream.Write(headerBytes, 0, headerBytes.Length);
+                            stream.Write(gzipData, 0, gzipData.Length);
                         }
-
-                        responseHeaders += $"Content-Length: {echoMessage.Length}\r\n\r\n";
-                        status = responseHeaders + echoMessage;
-
-                        // Print out response headers for debugging
-                        Console.WriteLine($"Response headers: {responseHeaders}");
+                        else
+                        {
+                            // If gzip encoding is not requested, send the response as plain text
+                            responseBuilder.Append("Content-Type: text/plain\r\n");
+                            responseBuilder.Append($"Content-Length: {echoData.Length}\r\n\r\n{echoData}");
+                            status = responseBuilder.ToString();
+                            byte[] response = Encoding.ASCII.GetBytes(status);
+                            stream.Write(response, 0, response.Length);
+                        }
                         break;
-
                     // Handle unknown actions
                     default:
                         status = RESP_404;
+                        byte[] response404 = Encoding.ASCII.GetBytes(status);
+                        stream.Write(response404, 0, response404.Length);
                         break;
                 }
-
-                // Write response to the client
-                byte[] response = Encoding.ASCII.GetBytes(status);
-                stream.Write(response, 0, response.Length);
             }
         }
     }
 
     // Compress a string using GZip
-    private static string CompressStringToGZip(string text)
+    private static byte[] CompressStringToGZip(string text)
     {
         byte[] buffer = Encoding.UTF8.GetBytes(text);
         using (MemoryStream memoryStream = new MemoryStream())
@@ -91,7 +96,7 @@ internal class Program
             {
                 gzipStream.Write(buffer, 0, buffer.Length);
             }
-            return Convert.ToBase64String(memoryStream.ToArray());
+            return memoryStream.ToArray();
         }
     }
 }
