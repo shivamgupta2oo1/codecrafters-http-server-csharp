@@ -115,6 +115,9 @@ internal class Program
                         }
                         responseHeaders += "\r\n";
                         status = responseHeaders + echoMessage;
+
+                        // Print out response headers for debugging
+                        Console.WriteLine($"Response headers: {responseHeaders}");
                         break;
 
                     // Handle requests for user agent
