@@ -82,7 +82,7 @@ internal class Program
                             else
                             {
                                 string fileContent = File.ReadAllText(fileName);
-                                status = RESP_200 + "Content-Type: text/plain\r\n";
+                                status = RESP_200 + "Content-Type: application/octet-stream\r\n";
                                 status += $"Content-Length: {fileContent.Length}\r\n\r\n{fileContent}";
                             }
                         }
