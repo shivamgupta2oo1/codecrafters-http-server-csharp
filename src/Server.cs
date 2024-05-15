@@ -14,7 +14,7 @@ internal class Program
         // Start TCP server
         TcpListener server = new TcpListener(IPAddress.Any, 4221);
         server.Start();
-        byte[] data = new byte[256];
+        byte[] data = new byte[1024]; // Increase buffer size for potential larger file uploads
         string RESP_200 = "HTTP/1.1 200 OK\r\n";
         string RESP_201 = "HTTP/1.1 201 Created\r\n\r\n";
         string RESP_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -70,7 +70,19 @@ internal class Program
                         // Log the constructed file path
                         Console.WriteLine($"File path: {fileName}");
 
-                        if (File.Exists(fileName))
+                        if (request.StartsWith("POST")) // Check if it's a POST request
+                        {
+                            // Extract file contents from the request body
+                            int contentStartIndex = request.IndexOf("\r\n\r\n") + 4; // Find the start of the content
+                            string fileContent = request.Substring(contentStartIndex);
+
+                            // Save file contents to the specified directory
+                            File.WriteAllText(fileName, fileContent);
+
+                            // Send 201 response for successful file upload
+                            status = RESP_201;
+                        }
+                        else if (File.Exists(fileName))
                         {
                             string fileContent = File.ReadAllText(fileName);
                             status = RESP_200 + "Content-Type: application/octet-stream\r\n";
