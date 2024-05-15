@@ -52,7 +52,21 @@ internal class Program
                             status = RESP_404;
                             break;
                         }
-                        string directoryName = args[0];
+                        string directoryName = null;
+                        string[] argPairs;
+                        for (int i = 0; i < args.Length; i++)
+                        {
+                            if (args[i] == "--directory" && i + 1 < args.Length)
+                            {
+                                directoryName = args[i + 1];
+                                break;
+                            }
+                        }
+                        if (directoryName == null)
+                        {
+                            status = RESP_404;
+                            break;
+                        }
                         string fileName = Path.Combine(directoryName, requestURL.Split("/")[2]);
 
                         // Log the constructed file path
