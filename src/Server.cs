@@ -7,33 +7,33 @@ using System.Threading.Tasks;
 
 class Program
 {
-static async Task Main(string[] args)
-{
-    if (args.Length != 2 || args[0] != "--directory")
+    static async Task Main(string[] args)
     {
-        Console.WriteLine("Usage: dotnet run -- --directory <directory>");
-        return;
+        if (args.Length != 2 || args[0] != "--directory")
+        {
+            Console.WriteLine("Usage: dotnet run -- --directory <directory>");
+            return;
+        }
+
+        string directory = args[1];
+
+        if (!Directory.Exists(directory))
+        {
+            Console.WriteLine("Directory not found.");
+            return;
+        }
+
+        TcpListener server = new TcpListener(IPAddress.Any, 4221);
+        server.Start();
+        Console.WriteLine("Server started. Waiting for connections...");
+
+        while (true)
+        {
+            TcpClient client = await server.AcceptTcpClientAsync();
+            Console.WriteLine("Client connected.");
+            _ = Task.Run(() => HandleClientAsync(client, directory));
+        }
     }
-
-    string directory = args[1];
-
-    if (!Directory.Exists(directory))
-    {
-        Console.WriteLine("Directory not found.");
-        return;
-    }
-
-    TcpListener server = new TcpListener(IPAddress.Any, 4221);
-    server.Start();
-    Console.WriteLine("Server started. Waiting for connections...");
-
-    while (true)
-    {
-        TcpClient client = await server.AcceptTcpClientAsync();
-        Console.WriteLine("Client connected.");
-        _ = Task.Run(() => HandleClientAsync(client, directory));
-    }
-}
 
     static async Task HandleClientAsync(TcpClient client, string directory)
     {
@@ -53,21 +53,21 @@ static async Task Main(string[] args)
 
                 if (File.Exists(filePath))
                 {
-                    string fileContents = File.ReadAllText(filePath);
-                    response = GenerateResponse("200 OK", "application/octet-stream", fileContents);
+                    string fileContents = await ReadFileAsync(filePath);
+                    response = $"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {fileContents.Length}\r\n\r\n{fileContents}";
                 }
                 else
                 {
-                    response = GenerateResponse("404 Not Found", "text/plain", "File Not Found");
+                    response = "HTTP/1.1 404 Not Found\r\n\r\n";
                 }
             }
             else
             {
-                response = GenerateResponse("404 Not Found", "text/plain", "Not Found");
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
             }
 
-            byte[] responseBuffer = Encoding.UTF8.GetBytes(response);
-            await stream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+            byte[] responseBytes = Encoding.ASCII.GetBytes(response);
+            await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
         }
         finally
         {
@@ -83,13 +83,11 @@ static async Task Main(string[] args)
         return parts.Length > 1 ? parts[1] : "";
     }
 
-    static string GenerateResponse(string status, string contentType, string responseBody)
+    static async Task<string> ReadFileAsync(string filePath)
     {
-        string response = $"HTTP/1.1 {status}\r\n";
-        response += $"Content-Type: {contentType}\r\n";
-        response += $"Content-Length: {responseBody.Length}\r\n";
-        response += "\r\n";
-        response += responseBody;
-        return response;
+        using (StreamReader reader = new StreamReader(filePath))
+        {
+            return await reader.ReadToEndAsync();
+        }
     }
 }
