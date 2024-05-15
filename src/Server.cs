@@ -19,14 +19,16 @@ class Program
         EnsureDirectoryExists(directory); // Ensure the directory exists
         GenerateSampleFile(directory);    // Generate a sample file in the directory
 
-        using var server = new TcpListener(IPAddress.Any, 4221);
+        TcpListener server = new TcpListener(IPAddress.Any, 4221);
         server.Start();
         Console.WriteLine("Server started. Listening for connections...");
 
         while (true)
         {
-            var client = await server.AcceptTcpClientAsync();
-            Task.Run(() => HandleClient(client, directory));
+            Console.Write("Waiting for a connection... ");
+            TcpClient client = await server.AcceptTcpClientAsync();
+            Console.WriteLine("Connected!");
+            _ = HandleClient(client, directory);
         }
     }
 
